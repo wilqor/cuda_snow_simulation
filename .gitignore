@@ -1,10 +1,29 @@
 *.class
+*.log
+.cache
+lib/
+*~
+*.old
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+# idea
+.idea
+*.iml
+
+# building
+target
+build
+dist
+dist/
+target/
+build.log
+tmp*
+temp*
+
+
 # Package Files #
-*.jar
 *.war
 *.ear
 
