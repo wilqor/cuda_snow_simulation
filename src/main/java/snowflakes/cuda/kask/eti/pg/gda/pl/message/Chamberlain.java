@@ -31,6 +31,9 @@ public class Chamberlain {
         }
 
         for(int id : receivedSnowflakesQueues.keySet()){
+
+            SnowflakeSimMain.snowflakeSizes.put(id, receivedSnowflakesQueues.get(id).poll());
+
             if(!SnowflakeSimMain.snowflakesQueues.containsKey(id) || SnowflakeSimMain.snowflakesQueues.get(id) == null)
                 SnowflakeSimMain.snowflakesQueues.put(id, new ConcurrentLinkedQueue<Float>(receivedSnowflakesQueues.get(id)));
             else SnowflakeSimMain.snowflakesQueues.get(id).addAll(receivedSnowflakesQueues.get(id));
@@ -39,6 +42,6 @@ public class Chamberlain {
         int queueSize = 0;
         for(Queue q : SnowflakeSimMain.snowflakesQueues.values())
             queueSize += q.size();
-        System.out.println("Successfully handled message. New queue size: " + queueSize);
+        System.out.println("Successfully handled message. Current queue size: " + queueSize);
     }
 }

@@ -41,4 +41,8 @@ public class Snowflake {
     public void incPosY(float value){
         this.posY += value;
     }
+
+    public void setSizeModulator(float sizeModulator) {
+        this.sizeModulator = sizeModulator;
+    }
 }

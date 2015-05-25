@@ -7,6 +7,7 @@ import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
 
 
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +21,7 @@ import java.util.logging.Logger;
 public class SnowflakeSimMain extends BasicGame {
     private Image snowflakeImage;
     public static Map<Integer, Queue<Float>> snowflakesQueues = null;
+    public static Map<Integer, Float> snowflakeSizes = null;
     public static Map<Integer, Snowflake> snowflakes = null;
     private MasterEndpoint server = null;
     private boolean waitingForHosts;
@@ -32,6 +34,7 @@ public class SnowflakeSimMain extends BasicGame {
     @Override
     public void init(GameContainer gc) throws SlickException {
         snowflakeImage = new Image("resources/snowflake.png");
+        snowflakeSizes = new HashMap<Integer, Float>(Commons.SNOWFLAKES_NUMBER);
         snowflakesQueues = new ConcurrentHashMap<Integer, Queue<Float>>(Commons.SNOWFLAKES_NUMBER);
         snowflakes = new ConcurrentHashMap<Integer, Snowflake>(Commons.SNOWFLAKES_NUMBER);
         try {

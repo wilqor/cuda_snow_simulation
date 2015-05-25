@@ -15,10 +15,11 @@ public class UpdateManager {
             Queue<Float> queue = snowflakesQueues.get(id);
             if(queue != null && !queue.isEmpty()){
                 if(!snowflakes.containsKey(id) || snowflakes.get(id) == null)
-                    snowflakes.put(id, new Snowflake(id, queue.poll(), queue.poll(), 1.0f));
+                    snowflakes.put(id, new Snowflake(id, queue.poll(), queue.poll(), SnowflakeSimMain.snowflakeSizes.get(id)));
                 else{
                     snowflakes.get(id).setPosX(queue.poll());
                     snowflakes.get(id).setPosY(queue.poll());
+                    snowflakes.get(id).setSizeModulator(SnowflakeSimMain.snowflakeSizes.get(id));
                 }
             }
         }
