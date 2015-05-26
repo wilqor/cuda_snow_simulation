@@ -23,8 +23,12 @@ public class SnowflakeSimMain extends BasicGame {
     public static Map<Integer, Queue<Float>> snowflakesQueues = null;
     public static Map<Integer, Float> snowflakeSizes = null;
     public static Map<Integer, Snowflake> snowflakes = null;
+    public static float windForce = 50;
+    public static float windAngle = 0;
     private MasterEndpoint server = null;
     private boolean waitingForHosts;
+    private boolean isKeyPressed;
+    private int keyPressed = 0;
 
     public SnowflakeSimMain(String gamename)
     {
@@ -33,6 +37,7 @@ public class SnowflakeSimMain extends BasicGame {
 
     @Override
     public void init(GameContainer gc) throws SlickException {
+        isKeyPressed = false;
         snowflakeImage = new Image("resources/snowflake.png");
         snowflakeSizes = new HashMap<Integer, Float>(Commons.SNOWFLAKES_NUMBER);
         snowflakesQueues = new ConcurrentHashMap<Integer, Queue<Float>>(Commons.SNOWFLAKES_NUMBER);
@@ -51,16 +56,20 @@ public class SnowflakeSimMain extends BasicGame {
     public void update(GameContainer gc, int delta) throws SlickException {
         if(!waitingForHosts)
             UpdateManager.getPositionsFromQueue(snowflakesQueues, snowflakes);
+        if(isKeyPressed){
+            UpdateManager.windInteractions(keyPressed);
+        }
+
     }
 
     @Override
     public void render(GameContainer gc, Graphics g) throws SlickException
     {
         if(waitingForHosts){
-            g.drawString("Waiting for hosts... press ENTER to finish waiting and start simulation. Currently connected: "
-                    + server.getConnectionPool().size() + " slaves.", 5.0f, Commons.SCREEN_H/2.0f);
+            RenderManager.renderHostInfo(g, server);
         } else {
             RenderManager.renderSnowflakes(snowflakes, snowflakeImage);
+            RenderManager.renderWindInfo(g);
         }
 
     }
@@ -70,6 +79,19 @@ public class SnowflakeSimMain extends BasicGame {
         super.keyPressed(key, c);
         if(waitingForHosts && key == Input.KEY_ENTER){
             waitingForHosts = false;
+        }
+        if(!waitingForHosts){
+            isKeyPressed = true;
+            keyPressed = key;
+        }
+    }
+
+    @Override
+    public void keyReleased(int key, char c) {
+        super.keyReleased(key, c);
+        if(!waitingForHosts){
+            isKeyPressed = false;
+            keyPressed = 0;
         }
     }
 

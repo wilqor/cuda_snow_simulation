@@ -1,5 +1,7 @@
 package snowflakes.cuda.kask.eti.pg.gda.pl.main;
 
+import org.newdawn.slick.Input;
+import snowflakes.cuda.kask.eti.pg.gda.pl.commons.Commons;
 import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
 
 import java.util.Map;
@@ -19,9 +21,34 @@ public class UpdateManager {
                 else{
                     snowflakes.get(id).setPosX(queue.poll());
                     snowflakes.get(id).setPosY(queue.poll());
-                    snowflakes.get(id).setSizeModulator(SnowflakeSimMain.snowflakeSizes.get(id));
+                    if(snowflakes.get(id).getPosY() > (float)(Commons.SCREEN_H))
+                        snowflakes.get(id).setSizeModulator(SnowflakeSimMain.snowflakeSizes.get(id));
                 }
             }
+        }
+    }
+    public static void windInteractions(int keyPressed){
+        switch (keyPressed) {
+            case Input.KEY_UP:
+                if(SnowflakeSimMain.windForce >= 100){
+                    SnowflakeSimMain.windForce = 100.0f;
+                } else
+                    SnowflakeSimMain.windForce += 0.2f;
+                break;
+            case Input.KEY_DOWN:
+                if(SnowflakeSimMain.windForce <= 0)
+                    SnowflakeSimMain.windForce=0.0f;
+                else
+                    SnowflakeSimMain.windForce-=0.2f;
+                break;
+            case Input.KEY_LEFT:
+                if(SnowflakeSimMain.windAngle <= -90) SnowflakeSimMain.windAngle = -90.0f;
+                else SnowflakeSimMain.windAngle -= 0.2f;
+                break;
+            case Input.KEY_RIGHT:
+                if(SnowflakeSimMain.windAngle >= 90) SnowflakeSimMain.windAngle = 90.0f;
+                else SnowflakeSimMain.windAngle += 0.2f;
+                break;
         }
     }
 }

@@ -9,7 +9,7 @@
     <version>1.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jcuda.version>0.7.0</jcuda.version>
+        <jcuda.version>0.6.5</jcuda.version>
         <slick.version>1.0</slick.version>
         <!--
         <system.version>linux-x86_64</system.version>
