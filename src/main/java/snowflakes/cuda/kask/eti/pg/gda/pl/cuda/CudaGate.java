@@ -27,7 +27,7 @@ public class CudaGate {
     }
 
     public Map<Integer, Queue<Float>> getNextIteration(float wind, float angle) {
-        ComputationResult result = cudaComputation.calculate(wind, angle);
+        ComputationResult result = cudaComputation.calculate(wind, (float) Commons.angleToRadian(angle));
         float snowflakePositions[] = result.getHostSnowflakePositions();
         int usageIndexes[] = result.getHostUsageIndexes();
         int rowSize = Commons.MAX_ITERATIONS * 2 + 1;

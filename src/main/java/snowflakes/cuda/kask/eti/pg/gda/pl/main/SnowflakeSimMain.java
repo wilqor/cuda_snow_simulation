@@ -1,8 +1,12 @@
 package snowflakes.cuda.kask.eti.pg.gda.pl.main;
 
+import org.java_websocket.WebSocket;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.newdawn.slick.*;
 import snowflakes.cuda.kask.eti.pg.gda.pl.commons.Commons;
 import snowflakes.cuda.kask.eti.pg.gda.pl.communication.MasterEndpoint;
+import snowflakes.cuda.kask.eti.pg.gda.pl.cuda.CudaGate;
 import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
 
 
@@ -79,11 +83,30 @@ public class SnowflakeSimMain extends BasicGame {
         super.keyPressed(key, c);
         if(waitingForHosts && key == Input.KEY_ENTER){
             waitingForHosts = false;
+            sendInitMessage();
         }
         if(!waitingForHosts){
             isKeyPressed = true;
             keyPressed = key;
         }
+    }
+
+    private void sendInitMessage() {
+        int i=0;
+        for (WebSocket ws : server.getConnectionPool()) {
+            JSONObject dto = new JSONObject();
+            dto.put(Commons.MESSAGE_ID, new Integer(i));
+            dto.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(Commons.SNOWFLAKES_NUMBER / server.getConnectionPool().size()));
+            dto.put(Commons.MESSAGE_WIND_FORCE, new Float(getTransferWindForce()));
+            dto.put(Commons.MESSAGE_WIND_ANGLE, new Float(windAngle));
+            ws.send(dto.toJSONString());
+            System.out.println(JSONValue.toJSONString(dto));
+            i++;
+        }
+    }
+
+    public static Float getTransferWindForce() {
+        return windForce / 50.0f;
     }
 
     @Override

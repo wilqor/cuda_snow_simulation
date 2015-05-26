@@ -49,7 +49,7 @@ public class MasterEndpoint extends WebSocketServer {
     @Override
     public void onMessage(WebSocket webSocket, String message) {
         System.out.println("Message on: " + webSocket.getRemoteSocketAddress() + " Content: " + (message.length()>100?message.substring(0, 100)+" [...] (message print has been shortened)":message) );
-        Chamberlain.handle(message);
+        Chamberlain.handle(message, webSocket);
     }
 
     @Override
