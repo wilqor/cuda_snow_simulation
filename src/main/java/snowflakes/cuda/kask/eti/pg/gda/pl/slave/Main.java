@@ -16,14 +16,14 @@ public class Main {
         Map<Integer, Float> sizes = new HashMap();
 
         Map<Integer, Queue<Float>> snowflakesQueues = new LinkedHashMap<Integer, Queue<Float>>();
-        String staticAddress = "ws://192.168.2.102:8080/";
+        //String staticAddress = "ws://192.168.1.41:8080/";
         System.out.println("Please write master address");
         Scanner scanner = new Scanner(System.in);
 
         String address = scanner.nextLine();
         address = "ws://" + address + ":8080/";
-        System.out.println(URI.create(staticAddress).toString());
-        SlaveEndpoint slave = new SlaveEndpoint(URI.create(staticAddress));
+        System.out.println(URI.create(address).toString());
+        SlaveEndpoint slave = new SlaveEndpoint(URI.create(address));
         //slave.connect();
         slave.connectBlocking();
         String line = "";
