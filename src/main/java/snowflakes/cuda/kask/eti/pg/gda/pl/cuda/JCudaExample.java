@@ -3,19 +3,44 @@ package snowflakes.cuda.kask.eti.pg.gda.pl.cuda;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.*;
+import jcuda.jcurand.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
+import java.util.Queue;
 
 import static jcuda.driver.JCudaDriver.*;
 import static jcuda.driver.JCudaDriver.cuMemFree;
+import static jcuda.jcurand.JCurand.curandCreateGenerator;
+import static jcuda.jcurand.JCurand.curandGenerateUniform;
+import static jcuda.jcurand.JCurand.curandSetPseudoRandomGeneratorSeed;
 
 /**
  * Created by Kuba on 2015-05-24.
  */
 public class JCudaExample {
+
+    public static void test() {
+
+
+        CudaGate cg = new CudaGate(10, 1);
+        Map<Integer, Queue<Float>> result = cg.getNextIteration(2.0f, 50.0f);
+        for (Map.Entry<Integer, Queue<Float>> entry : result.entrySet()) {
+            System.out.println("Snowflake number " + entry.getKey());
+            System.out.println(entry.getValue().toString());
+        }
+        cg.cleanup();
+        /*
+        CudaComputation cuda = new CudaComputation(10, 10, 0.1f, 5.0f, -200.0f, 1200.0f,
+                                    -100.0f, 1100.0f, 1.0f, 100.0f);
+        cuda.init();
+        cuda.calculate(2.0f, 50.0f * (float) Math.PI / 180.0f);
+        cuda.cleanup();
+        */
+    }
 
     public static void run() throws IOException {
         // Enable exceptions and omit all subsequent error checks
@@ -37,7 +62,7 @@ public class JCudaExample {
 
         // Obtain a function pointer to the "add" function.
         CUfunction function = new CUfunction();
-        cuModuleGetFunction(function, module, "add");
+        cuModuleGetFunction(function, module, "dalibomba");
 
         int numElements = 100000;
 
@@ -95,7 +120,7 @@ public class JCudaExample {
         boolean passed = true;
         for(int i = 0; i < numElements; i++)
         {
-            float expected = i+i;
+            float expected = (float) Math.sin(2.0d * i);
             if (Math.abs(hostOutput[i] - expected) > 1e-5)
             {
                 System.out.println(
@@ -107,10 +132,55 @@ public class JCudaExample {
         }
         System.out.println("Test "+(passed?"PASSED":"FAILED"));
 
+        randomInvocation();
+
         // Clean up.
         cuMemFree(deviceInputA);
         cuMemFree(deviceInputB);
         cuMemFree(deviceOutput);
+    }
+
+    private static void randomInvocation() {
+        // Allocate device memory
+        CUdeviceptr deviceData = new CUdeviceptr();
+        int n = 100;
+        cuMemAlloc(deviceData, n * Sizeof.FLOAT);
+
+        // Create and initialize a pseudo-random number generator
+        curandGenerator generator = new curandGenerator();
+        curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT);
+        curandSetPseudoRandomGeneratorSeed(generator, 1234);
+
+        // Generate random numbers
+        curandGenerateUniform(generator, deviceData, n);
+
+        // Copy the random numbers from the device to the host
+        float hostData[] = new float[n];
+
+        cuMemcpyDtoH(Pointer.to(hostData), deviceData,
+                n * Sizeof.FLOAT);
+        for (int i=0; i < n; i++) {
+            System.out.println("The rand value is: " + hostData[i]);
+        }
+    }
+
+    public static float[] generateRandomValues(int size) {
+        float values[] = new float[size];
+        // allocate dev memory
+        CUdeviceptr deviceData = new CUdeviceptr();
+        cuMemAlloc(deviceData, size * Sizeof.FLOAT);
+
+        // prepare pseudo-random number generator
+        curandGenerator generator = new curandGenerator();
+        curandCreateGenerator(generator, curandRngType.CURAND_RNG_PSEUDO_DEFAULT);
+        curandSetPseudoRandomGeneratorSeed(generator, System.currentTimeMillis());
+
+        // the generation itself
+        curandGenerateUniform(generator, deviceData, size * Sizeof.FLOAT);
+
+        // return results to host
+        cuMemcpyDtoH(Pointer.to(values), deviceData, size * Sizeof.FLOAT);
+        return values;
     }
 
     /**
