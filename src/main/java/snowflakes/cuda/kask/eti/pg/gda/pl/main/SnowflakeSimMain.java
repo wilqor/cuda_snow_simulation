@@ -122,6 +122,7 @@ public class SnowflakeSimMain extends BasicGame {
     {
         try
         {
+            Commons.SNOWFLAKES_NUMBER = Integer.parseInt(args[0]);
             AppGameContainer appgc;
             appgc = new AppGameContainer(new SnowflakeSimMain("Snowflake Simulator"));
             appgc.setDisplayMode(Commons.SCREEN_W, Commons.SCREEN_H, false);
