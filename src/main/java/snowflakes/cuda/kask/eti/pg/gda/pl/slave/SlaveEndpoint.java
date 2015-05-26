@@ -11,6 +11,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Queue;
+import java.util.TreeMap;
 
 /**
  * Created by Ariel on 2015-05-18.
@@ -68,6 +69,20 @@ public class SlaveEndpoint extends WebSocketClient {
     private void calculateAndSend() {
         Map<Integer, Queue<Float>> snowflakesQueues;
         snowflakesQueues = cudaGate.getNextIteration(windForce, windAngle);
-        send(JSONValue.toJSONString(snowflakesQueues));
+
+        final int FRAME_SIZE = 1200;
+
+        if(snowflakesQueues.size() > FRAME_SIZE){
+            TreeMap<Integer, Queue<Float>> fullMessage = new TreeMap<Integer, Queue<Float>>(snowflakesQueues);
+
+            int framesNo = (int)Math.ceil((double)snowflakesQueues.size()/(double)FRAME_SIZE);
+
+            for(int i = 0; i < framesNo; i++){
+                send(JSONValue.toJSONString(fullMessage.subMap(i*FRAME_SIZE, (i+1)*FRAME_SIZE)));
+            }
+
+        } else {
+            send(JSONValue.toJSONString(snowflakesQueues));
+        }
     }
 }
