@@ -18,6 +18,10 @@ build
 dist
 dist/
 target/
+*/dist
+*/target/
+out
+*/out/
 build.log
 tmp*
 temp*
