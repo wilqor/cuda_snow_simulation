@@ -58,3 +58,5 @@ mvn deploy:deploy-file -DgroupId=slick.linux -DartifactId=liblwjgl -Dversion=%sl
 mvn deploy:deploy-file -DgroupId=slick.linux -DartifactId=liblwjgl64 -Dversion=%slick_version% -Dfile=liblwjgl64.so -Durl=file://.
 mvn deploy:deploy-file -DgroupId=slick.linux -DartifactId=libopenal -Dversion=%slick_version% -Dfile=libopenal.so -Durl=file://.
 mvn deploy:deploy-file -DgroupId=slick.linux -DartifactId=libopenal64 -Dversion=%slick_version% -Dfile=libopenal64.so -Durl=file://.
+
+mvn deploy:deploy-file -DgroupId=cuda.kask.eti.pg.gda -DartifactId=SnowflakesCudaSimulationCommons -Dversion=1.0 -Dfile=SnowflakesCudaSimulationCommons-1.0.jar -Durl=file://.
