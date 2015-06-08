@@ -57,7 +57,8 @@ public class CudaComputation {
     {
         int array[] = { 0 }, warpSize = 32, blocksPerSM, numberOfSM;
         // block size set to a minimum of 32 to trigger maximum number of concurrent blocks per SM
-        cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(array, calculationFunction, warpSize, 0, 0);
+        //cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(array, calculationFunction, warpSize, 0, 0);
+        cuOccupancyMaxActiveBlocksPerMultiprocessor(array,calculationFunction,warpSize,0);
         blocksPerSM = array[0];
 
         cudaDeviceProp deviceProp = new cudaDeviceProp();

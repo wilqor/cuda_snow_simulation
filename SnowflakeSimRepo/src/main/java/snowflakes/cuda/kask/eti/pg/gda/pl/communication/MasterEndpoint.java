@@ -9,6 +9,7 @@ import snowflakes.cuda.kask.eti.pg.gda.pl.message.Chamberlain;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +48,12 @@ public class MasterEndpoint extends WebSocketServer {
     public void onClose(WebSocket webSocket, int code, String reason, boolean remote) {
         logger.log("Closing: " + webSocket.getRemoteSocketAddress() + " with code: " + code + ". Reason: " + reason );
         connectionPool.remove(webSocket);
+    }
+
+    @Override
+    public void onMessage(WebSocket webSocket, ByteBuffer message) {
+        logger.log("Message on: " + webSocket.getRemoteSocketAddress() + " Content byte size: " + message.array().length );
+        Chamberlain.handle(message.array(), webSocket);
     }
 
     @Override

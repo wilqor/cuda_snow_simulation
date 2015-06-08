@@ -9,6 +9,7 @@ import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
 import snowflakes.cuda.kask.eti.pg.gda.pl.communication.MasterEndpoint;
 import snowflakes.cuda.kask.eti.pg.gda.pl.message.Chamberlain;
 import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
+import static snowflakes.cuda.kask.eti.pg.gda.pl.commons.SnowflakeMessages.*;
 
 
 import java.net.UnknownHostException;
@@ -100,10 +101,13 @@ public class SnowflakeSimMain extends BasicGame {
         logger.log("Starting init messages...");
         Chamberlain.startTime();
         for (WebSocket ws : server.getConnectionPool()) {
-            JSONObject dto = new JSONObject();
-            dto.put(Commons.MESSAGE_ID, new Integer(i));
-            ws.send(dto.toJSONString());
-            System.out.println(JSONValue.toJSONString(dto));
+
+//            JSONObject dto = new JSONObject();
+//            dto.put(Commons.MESSAGE_ID, new Integer(i));
+//            ws.send(dto.toJSONString());
+//            System.out.println(JSONValue.toJSONString(dto));
+            ws.send(SnowflakeData.newBuilder().setSlaveId(i).build().toByteArray());
+            logger.log("Sent id: " + i + " to " + ws.getRemoteSocketAddress());
             i++;
         }
         Chamberlain.CONNECTIONS_NUMBER = i;

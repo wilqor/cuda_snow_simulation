@@ -1,14 +1,17 @@
 package snowflakes.cuda.kask.eti.pg.gda.pl.message;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import snowflakes.cuda.kask.eti.pg.gda.pl.commons.Commons;
+import snowflakes.cuda.kask.eti.pg.gda.pl.commons.SnowflakeMessages;
 import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
 import snowflakes.cuda.kask.eti.pg.gda.pl.communication.MasterEndpoint;
 import snowflakes.cuda.kask.eti.pg.gda.pl.main.SnowflakeSimMain;
 import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
+import static snowflakes.cuda.kask.eti.pg.gda.pl.commons.SnowflakeMessages.*;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,23 +58,102 @@ public class Chamberlain {
         // check remaining size and distribute
         int partSize = calculatePartSize(slaveCapacities.get(socket));
         // send, update counters
-        JSONObject msg = new JSONObject();
-        if (partSize != 0) {
-            msg.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(partSize));
-            msg.put(Commons.MESSAGE_WIND_FORCE, new Float(SnowflakeSimMain.getTransferWindForce()));
-            msg.put(Commons.MESSAGE_WIND_ANGLE, new Float(SnowflakeSimMain.windAngle));
-            // LOG
-            logger.log("Remaining is: " + snowFlakesRemaining + " distributed is: " + snowFlakesDistributed);
-            socket.send(msg.toJSONString());
-            logger.log("Sent PART: " + msg.toJSONString() + " to: " + socket.getRemoteSocketAddress());
-            snowFlakesDistributed += partSize;
+        SnowflakeData.Builder msgBuilder = SnowflakeData.newBuilder();
+        if(partSize != 0) {
+            msgBuilder.setSnowflakeTask(
+                    SnowflakeData.SnowflakeTask.newBuilder()
+                            .setCurrentSnowflakesCount(partSize)
+                            .setWindForce(SnowflakeSimMain.getTransferWindForce())
+                            .setWindAngle(SnowflakeSimMain.windAngle).build());
+        } else {
+            msgBuilder.setEndOfWork(true);
         }
-        // send finish
-        else {
-            msg.put(Commons.NO_MORE_WORK, new Integer(0));
-            logger.log("Remaining is: " + snowFlakesRemaining + " distributed is: " + snowFlakesDistributed);
-            socket.send(msg.toJSONString());
-            logger.log("Sent NO MORE WORK: " + msg.toJSONString() + " to: " + socket.getRemoteSocketAddress());
+        logger.log("Remaining is: " + snowFlakesRemaining + " distributed is: " + snowFlakesDistributed);
+        socket.send(msgBuilder.build().toByteArray());
+        if(partSize != 0) logger.log("Sent PART: " + partSize + " to: " + socket.getRemoteSocketAddress());
+        else logger.log("Sent NO MORE WORK to: " + socket.getRemoteSocketAddress());
+        
+        
+
+//        JSONObject msg = new JSONObject();
+//        if (partSize != 0) {
+//            msg.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(partSize));
+//            msg.put(Commons.MESSAGE_WIND_FORCE, new Float(SnowflakeSimMain.getTransferWindForce()));
+//            msg.put(Commons.MESSAGE_WIND_ANGLE, new Float(SnowflakeSimMain.windAngle));
+//            // LOG
+//            logger.log("Remaining is: " + snowFlakesRemaining + " distributed is: " + snowFlakesDistributed);
+//            socket.send(msg.toJSONString());
+//            logger.log("Sent PART: " + msg.toJSONString() + " to: " + socket.getRemoteSocketAddress());
+//            snowFlakesDistributed += partSize;
+//        }
+//        // send finish
+//        else {
+//            msg.put(Commons.NO_MORE_WORK, new Integer(0));
+//            logger.log("Remaining is: " + snowFlakesRemaining + " distributed is: " + snowFlakesDistributed);
+//            socket.send(msg.toJSONString());
+//            logger.log("Sent NO MORE WORK: " + msg.toJSONString() + " to: " + socket.getRemoteSocketAddress());
+//        }
+    }
+
+    public static void handle(byte[] message, WebSocket ws){
+        SnowflakeData snowflakeData = null;
+        try {
+            snowflakeData = SnowflakeData.parseFrom(message);
+
+        } catch (InvalidProtocolBufferException e) {
+            logger.log("Invalid message! Please check protobuf.");
+        }
+        if(snowflakeData == null){
+            logger.log("Invalid message! Message null! Please check protobuf.");
+            return;
+        }
+
+        if(snowflakeData.hasSlaveCapacity()){
+            Integer capacity = snowflakeData.getSlaveCapacity();
+            if (capacity.equals(0)) {
+                logger.log("Slave cannot compute");
+            } else {
+                // add to dictionary
+                slaveCapacities.put(ws, capacity);
+            }
+            initResponses++;
+            if (initResponses == CONNECTIONS_NUMBER) {
+                initSnowFlakeCounters();
+                logger.log("Finished gathering capacities, sending initial parts...");
+                // send part to everyone
+                for (WebSocket socket : slaveCapacities.keySet()) {
+                    sendPartToSlave(socket);
+                }
+                logger.log("Finished sending initial parts");
+            }
+        } else if (snowflakeData.getMapFieldCount() > 0 && !snowflakeData.hasTotalMessageSize()){
+            Map<Integer, Queue<Float>> receivedMap = new HashMap<Integer, Queue<Float>>();
+            for(SnowflakeData.MyMapField field : snowflakeData.getMapFieldList()){
+                receivedMap.put(field.getKey(), new ConcurrentLinkedQueue<Float>(field.getValueList()));
+            }
+            logger.log("Finished deserialization");
+            handlePartsMessage(receivedMap);
+        } else if (snowflakeData.getMapFieldCount() > 0 && snowflakeData.hasTotalMessageSize()){
+            Map<Integer, Queue<Float>> receivedMap = new HashMap<Integer, Queue<Float>>();
+            for(SnowflakeData.MyMapField field : snowflakeData.getMapFieldList()){
+                receivedMap.put(field.getKey(), new ConcurrentLinkedQueue<Float>(field.getValueList()));
+            }
+            logger.log("Finished deserialization");
+            handlePartsMessage(receivedMap);
+
+            // finished task
+            Integer size = snowflakeData.getTotalMessageSize();
+            logger.log("Received finish of parts with size: " + size);
+            // reduce counters
+            snowFlakesDistributed -= size;
+            snowFlakesRemaining -= size;
+            if (snowFlakesRemaining == 0) {
+                endTime();
+                logger.log("FINISHED CALCULATIONS - overall time is: " + (endTimeStamp - startTimeStamp) + " ms");
+            }
+            // send next part
+            sendPartToSlave(ws);
+
         }
     }
 
@@ -100,7 +182,7 @@ public class Chamberlain {
             // data part
             logger.log("Starting deserialization...");
             Map<String, JSONArray> rawMessageParsed = (Map<String, JSONArray>) dto.get(Commons.SNOWFLAKES_PART);
-            handlePartsMessage(rawMessageParsed);
+            //handlePartsMessage(rawMessageParsed);
         } else if (dto.containsKey(Commons.PART_FINISH)) {
             // finished task
             Integer size = ((Long) dto.get(Commons.PART_FINISH)).intValue();
@@ -117,18 +199,8 @@ public class Chamberlain {
         }
     }
 
-    private static void handlePartsMessage(Map<String, JSONArray> rawMessageParsed) {
+    private static void handlePartsMessage(Map<Integer, Queue<Float>> receivedSnowflakesQueues) {
         if (countQueuesOversize(ACTIVE_SNOWFLAKE_QUEUE_SIZE) < DISPLAY_LIMIT_INITIAL) {
-            Map<Integer, Queue<Float>> receivedSnowflakesQueues = new ConcurrentHashMap<Integer, Queue<Float>>();
-            for(String sid : rawMessageParsed.keySet()){
-                JSONArray jsonArray = rawMessageParsed.get(sid);
-                List<Float> snowflakeOrderedPositions = new ArrayList<Float>(jsonArray.size());
-                for(Object o : jsonArray){
-                    snowflakeOrderedPositions.add(((Double)o).floatValue());
-                }
-                receivedSnowflakesQueues.put(Integer.parseInt(sid), new ConcurrentLinkedQueue<Float>(snowflakeOrderedPositions));
-            }
-            logger.log("Finished deserialization");
 
             for(int id : receivedSnowflakesQueues.keySet()){
                 // do not exceed max display limit
