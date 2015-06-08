@@ -98,18 +98,17 @@ public class SnowflakeSimMain extends BasicGame {
     private void sendInitMessage() {
         int i = 0;
         logger.log("Starting init messages...");
+        Chamberlain.startTime();
         for (WebSocket ws : server.getConnectionPool()) {
             JSONObject dto = new JSONObject();
             dto.put(Commons.MESSAGE_ID, new Integer(i));
-//            dto.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(Commons.SNOWFLAKES_NUMBER / server.getConnectionPool().size()));
-//            dto.put(Commons.MESSAGE_WIND_FORCE, new Float(getTransferWindForce()));
-//            dto.put(Commons.MESSAGE_WIND_ANGLE, new Float(windAngle));
             ws.send(dto.toJSONString());
             System.out.println(JSONValue.toJSONString(dto));
             i++;
         }
         Chamberlain.CONNECTIONS_NUMBER = i;
         // setup total snowflakes for Chamberlain
+
         logger.log("Finished sending init messages");
     }
 

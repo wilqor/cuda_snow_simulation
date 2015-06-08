@@ -30,6 +30,8 @@ public class Chamberlain {
     private static int initResponses = 0, snowFlakesRemaining, snowFlakesDistributed;
     private static Map<WebSocket, Integer> slaveCapacities = new HashMap<WebSocket, Integer>();
 
+    private static long startTimeStamp, endTimeStamp;
+
     private static void initSnowFlakeCounters() {
         snowFlakesRemaining = Commons.SNOWFLAKES_NUMBER;
         snowFlakesDistributed = 0;
@@ -37,6 +39,16 @@ public class Chamberlain {
 
     private static int calculatePartSize(int capacity) {
         return Math.min(snowFlakesRemaining - snowFlakesDistributed, capacity);
+    }
+
+    public static void startTime() {
+        startTimeStamp = (new Date()).getTime();
+        logger.log("STARTING time measure");
+    }
+
+    private static void endTime() {
+        endTimeStamp = (new Date()).getTime();
+        logger.log("ENDING time measure");
     }
 
     private static void sendPartToSlave(WebSocket socket) {
@@ -96,6 +108,10 @@ public class Chamberlain {
             // reduce counters
             snowFlakesDistributed -= size;
             snowFlakesRemaining -= size;
+            if (snowFlakesRemaining == 0) {
+                endTime();
+                logger.log("FINISHED CALCULATIONS - overall time is: " + (endTimeStamp - startTimeStamp) + " ms");
+            }
             // send next part
             sendPartToSlave(ws);
         }

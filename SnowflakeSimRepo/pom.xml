@@ -364,7 +364,7 @@
                         <classpath/>
                         <!-- the main class -->
                         <argument>snowflakes.cuda.kask.eti.pg.gda.pl.main.SnowflakeSimMain</argument>
-                        <argument>500</argument>
+                        <argument>10000</argument>
                         <!-- other possible arguments -->
                     </arguments>
                 </configuration>
