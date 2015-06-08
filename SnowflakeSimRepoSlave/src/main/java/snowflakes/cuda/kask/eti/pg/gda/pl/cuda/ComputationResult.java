@@ -4,6 +4,7 @@ package snowflakes.cuda.kask.eti.pg.gda.pl.cuda;
  * Created by Kuba on 2015-05-26.
  */
 public class ComputationResult {
+
     private final float hostSnowflakePositions[];
     private final int hostUsageIndexes[];
 

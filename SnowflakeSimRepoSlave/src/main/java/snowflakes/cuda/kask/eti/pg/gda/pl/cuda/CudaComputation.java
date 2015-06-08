@@ -1,45 +1,49 @@
 package snowflakes.cuda.kask.eti.pg.gda.pl.cuda;
 
-import com.sun.glass.ui.Size;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.*;
 import jcuda.jcurand.curandGenerator;
 import jcuda.jcurand.curandRngType;
-
-import java.awt.*;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import jcuda.runtime.cudaDeviceProp;
+import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
+import java.io.*;
 
 import static jcuda.driver.JCudaDriver.*;
 import static jcuda.jcurand.JCurand.curandCreateGenerator;
 import static jcuda.jcurand.JCurand.curandGenerateUniform;
 import static jcuda.jcurand.JCurand.curandSetPseudoRandomGeneratorSeed;
+import static jcuda.runtime.JCuda.cudaGetDeviceProperties;
 
 /**
  * Created by Kuba on 2015-05-25.
  */
 public class CudaComputation {
 
+    private final static TimeLogger logger = TimeLogger.getTimeLogger(CudaComputation.class.getSimpleName());
+
     public static final String KERNEL_FILE_NAME = "SnowflakeSimulation.cu";
     public static final String KERNEL_PREPARATION_FUNCTION = "prepare";
     public static final String KERNEL_CALCULATION_FUNCTION = "calculate";
+    private static final int RANDOM_VALUES_FOR_SNOWFLAKE = 2, COORDINATES_FOR_SNOWFLAKE = 2, DEVICE_NUMBER = 0;
 
-    private static final int RANDOM_VALUES_FOR_SNOWFLAKE = 2, COORDINATES_FOR_SNOWFLAKE = 2;
-    private final int iterations, snowflakesCount;
+    // rounded up (14000*8 + 4 + 8)
+    private static final long SNOWFLAKE_MAX_REQUIREMENT = 200000;
+    private int iterations;
     private final float minScale, maxScale, minX, maxX, minY, maxY, gravity;
     private CUfunction preparationFunction, calculationFunction;
     private CUdeviceptr snowflakesUsageIndexes, snowflakePositions, deviceRandomInit;
     private float hostSnowflakePositions[];
     private int hostUsageIndexes[];
 
-    public CudaComputation(int iterations, int snowflakesCount, float minScale, float maxScale,
+    private CUdevice device;
+
+    private int gridSizeX, blockSizeX, snowflakeCapacity;
+
+    public CudaComputation(int iterations, float minScale, float maxScale,
                            float minX, float maxX, float minY, float maxY,
                            float gravity) {
         this.iterations = iterations;
-        this.snowflakesCount = snowflakesCount;
         this.minScale = minScale;
         this.maxScale = maxScale;
         this.minX = minX;
@@ -47,9 +51,34 @@ public class CudaComputation {
         this.minY = minY;
         this.maxY = maxY;
         this.gravity = gravity;
-        // + 1 for scale
-        hostSnowflakePositions = new float[snowflakesCount * (iterations * COORDINATES_FOR_SNOWFLAKE + 1)];
-        hostUsageIndexes = new int[snowflakesCount];
+    }
+
+    private void queryDeviceParameters()
+    {
+        int array[] = { 0 }, warpSize = 32, blocksPerSM, numberOfSM;
+        // block size set to a minimum of 32 to trigger maximum number of concurrent blocks per SM
+        cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(array, calculationFunction, warpSize, 0, 0);
+        blocksPerSM = array[0];
+
+        cudaDeviceProp deviceProp = new cudaDeviceProp();
+        cudaGetDeviceProperties(deviceProp, DEVICE_NUMBER);
+        numberOfSM = deviceProp.multiProcessorCount;
+        logger.log("Available SM: " + numberOfSM);
+
+        gridSizeX = blocksPerSM * numberOfSM;
+        logger.log("Total blocks used: " + gridSizeX);
+
+        blockSizeX = deviceProp.maxThreadsPerBlock;
+        logger.log("Max threads per block: " + blockSizeX);
+
+        snowflakeCapacity = calculateSnowflakeCapacity(deviceProp.totalGlobalMem);
+        logger.log("Global memory: " + deviceProp.totalGlobalMem);
+        logger.log("Capacity: " + snowflakeCapacity);
+    }
+
+    private static int calculateSnowflakeCapacity(long memorySize) {
+        // memory available / max memory needed for 1 snowflake
+        return (int) (memorySize / SNOWFLAKE_MAX_REQUIREMENT);
     }
 
     public boolean init() {
@@ -58,14 +87,14 @@ public class CudaComputation {
         try {
             ptxFileName = preparePtxFile(KERNEL_FILE_NAME);
         } catch (IOException e) {
-            System.out.println("Could not prepare kernel PTX file.");
+            logger.log("Could not prepare kernel PTX file.");
             return false;
         }
 
         // initializing the 1st available device as default
         cuInit(0);
-        CUdevice device = new CUdevice();
-        cuDeviceGet(device, 0);
+        device = new CUdevice();
+        cuDeviceGet(device, DEVICE_NUMBER);
         CUcontext context = new CUcontext();
         cuCtxCreate(context, 0, device);
 
@@ -79,24 +108,27 @@ public class CudaComputation {
         cuModuleGetFunction(preparationFunction, module, KERNEL_PREPARATION_FUNCTION);
         cuModuleGetFunction(calculationFunction, module, KERNEL_CALCULATION_FUNCTION);
 
+        queryDeviceParameters();
+
+        // + 1 for scale
+        hostSnowflakePositions = new float[snowflakeCapacity * (iterations * COORDINATES_FOR_SNOWFLAKE + 1)];
+        hostUsageIndexes = new int[snowflakeCapacity];
+
         // allocate device memory
         snowflakesUsageIndexes = new CUdeviceptr();
-        cuMemAlloc(snowflakesUsageIndexes, snowflakesCount * Sizeof.INT);
+        cuMemAlloc(snowflakesUsageIndexes, snowflakeCapacity * Sizeof.INT);
 
         deviceRandomInit = new CUdeviceptr();
-        cuMemAlloc(deviceRandomInit, snowflakesCount * RANDOM_VALUES_FOR_SNOWFLAKE * Sizeof.FLOAT);
+        cuMemAlloc(deviceRandomInit, snowflakeCapacity * RANDOM_VALUES_FOR_SNOWFLAKE * Sizeof.FLOAT);
 
         snowflakePositions = new CUdeviceptr();
-        cuMemAlloc(snowflakePositions, snowflakesCount * (iterations * COORDINATES_FOR_SNOWFLAKE + 1) * Sizeof.FLOAT);
+        cuMemAlloc(snowflakePositions, snowflakeCapacity * (iterations * COORDINATES_FOR_SNOWFLAKE + 1) * Sizeof.FLOAT);
         return true;
     }
 
-    public ComputationResult calculate(float wind, float angle) {
-
+    public ComputationResult calculate(float wind, float angle, int snowflakesCount) {
+        logger.log("Starting calculations...");
         fillWithRandomValues(deviceRandomInit, snowflakesCount * RANDOM_VALUES_FOR_SNOWFLAKE);
-
-        int blockSizeX = 512;
-        int gridSizeX = 90;
 
         // prepare positions for each snowflake
         Pointer preparationParameters = Pointer.to(
@@ -112,8 +144,8 @@ public class CudaComputation {
                 Pointer.to(new float[]{minY})
         );
         cuLaunchKernel(preparationFunction,
-                gridSizeX, 1, 1,
-                blockSizeX, 1, 1,
+                gridSizeX, 1, 1,            // grid dimensions
+                blockSizeX, 1, 1,           // block dimensions
                 0, null,                    // shared memory size and stream
                 preparationParameters, null // kernel- and extra parameters
         );
@@ -138,11 +170,14 @@ public class CudaComputation {
                 calculationParameters, null // kernel- and extra parameters
         );
         cuCtxSynchronize();
+        logger.log("Finished calculations");
+        logger.log("Starting copying from device...");
         // copy from device to host
         cuMemcpyDtoH(Pointer.to(hostSnowflakePositions), snowflakePositions,
                 snowflakesCount * (iterations * COORDINATES_FOR_SNOWFLAKE + 1) * Sizeof.FLOAT);
         cuMemcpyDtoH(Pointer.to(hostUsageIndexes), snowflakesUsageIndexes,
                 snowflakesCount * Sizeof.INT);
+        logger.log("Finished copying from device");
         // return results from host array
         return new ComputationResult(hostSnowflakePositions, hostUsageIndexes);
     }
@@ -161,6 +196,10 @@ public class CudaComputation {
         cuMemFree(snowflakesUsageIndexes);
         cuMemFree(deviceRandomInit);
         cuMemFree(snowflakePositions);
+    }
+
+    public int getSnowflakeCapacity() {
+        return snowflakeCapacity;
     }
 
     /**

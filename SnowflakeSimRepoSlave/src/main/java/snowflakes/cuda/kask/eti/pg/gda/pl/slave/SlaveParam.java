@@ -6,6 +6,15 @@ package snowflakes.cuda.kask.eti.pg.gda.pl.slave;
 public class SlaveParam {
 
     private float windForce, windAngle;
+    private int snowflakesCount;
+
+    public int getSnowflakesCount() {
+        return snowflakesCount;
+    }
+
+    public void setSnowflakesCount(int snowflakesCount) {
+        this.snowflakesCount = snowflakesCount;
+    }
 
     public float getWindForce() {
         return windForce;

@@ -5,7 +5,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.newdawn.slick.*;
 import snowflakes.cuda.kask.eti.pg.gda.pl.commons.Commons;
+import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
 import snowflakes.cuda.kask.eti.pg.gda.pl.communication.MasterEndpoint;
+import snowflakes.cuda.kask.eti.pg.gda.pl.message.Chamberlain;
 import snowflakes.cuda.kask.eti.pg.gda.pl.snowflakes.Snowflake;
 
 
@@ -22,6 +24,9 @@ import java.util.logging.Logger;
  * Created by Ariel on 2015-05-11.
  */
 public class SnowflakeSimMain extends BasicGame {
+
+    private final static TimeLogger logger = TimeLogger.getTimeLogger(SnowflakeSimMain.class.getSimpleName());
+
     private Image snowflakeImage;
     public static Map<Integer, Queue<Float>> snowflakesQueues = null;
     public static Map<Integer, Float> snowflakeSizes = null;
@@ -91,17 +96,21 @@ public class SnowflakeSimMain extends BasicGame {
     }
 
     private void sendInitMessage() {
-        int i=0;
+        int i = 0;
+        logger.log("Starting init messages...");
         for (WebSocket ws : server.getConnectionPool()) {
             JSONObject dto = new JSONObject();
             dto.put(Commons.MESSAGE_ID, new Integer(i));
-            dto.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(Commons.SNOWFLAKES_NUMBER / server.getConnectionPool().size()));
-            dto.put(Commons.MESSAGE_WIND_FORCE, new Float(getTransferWindForce()));
-            dto.put(Commons.MESSAGE_WIND_ANGLE, new Float(windAngle));
+//            dto.put(Commons.MESSAGE_SNOWFLAKES_COUNT, new Integer(Commons.SNOWFLAKES_NUMBER / server.getConnectionPool().size()));
+//            dto.put(Commons.MESSAGE_WIND_FORCE, new Float(getTransferWindForce()));
+//            dto.put(Commons.MESSAGE_WIND_ANGLE, new Float(windAngle));
             ws.send(dto.toJSONString());
             System.out.println(JSONValue.toJSONString(dto));
             i++;
         }
+        Chamberlain.CONNECTIONS_NUMBER = i;
+        // setup total snowflakes for Chamberlain
+        logger.log("Finished sending init messages");
     }
 
     public static Float getTransferWindForce() {

@@ -21,7 +21,7 @@
         <system.version>linux-x86_64</system.version>
          -->
         <system.version>windows-x86_64</system.version>
-        <main_dir>${project.parent.relativePath}/..</main_dir>
+        <main_dir>..</main_dir>
     </properties>
 
     <dependencies>
@@ -364,7 +364,7 @@
                         <classpath/>
                         <!-- the main class -->
                         <argument>snowflakes.cuda.kask.eti.pg.gda.pl.main.SnowflakeSimMain</argument>
-                        <argument>1000</argument>
+                        <argument>500</argument>
                         <!-- other possible arguments -->
                     </arguments>
                 </configuration>

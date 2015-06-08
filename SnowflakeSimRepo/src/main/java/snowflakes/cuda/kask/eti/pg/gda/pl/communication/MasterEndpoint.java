@@ -3,6 +3,7 @@ package snowflakes.cuda.kask.eti.pg.gda.pl.communication;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
 import snowflakes.cuda.kask.eti.pg.gda.pl.message.Chamberlain;
 
 import java.net.Inet4Address;
@@ -16,13 +17,15 @@ import java.util.List;
  */
 public class MasterEndpoint extends WebSocketServer {
 
+    private final static TimeLogger logger = TimeLogger.getTimeLogger(MasterEndpoint.class.getSimpleName());
+
     private List<WebSocket> connectionPool = new ArrayList<WebSocket>();
 
     private static MasterEndpoint instance = null;
 
     private MasterEndpoint() throws UnknownHostException {
         super(new InetSocketAddress(Inet4Address.getLocalHost().getHostAddress(), 8080));
-        System.out.println("Server started at: " + Inet4Address.getLocalHost().getHostAddress()+ ":" + 8080);
+        logger.log("Server started at: " + Inet4Address.getLocalHost().getHostAddress()+ ":" + 8080);
     }
 
     public static MasterEndpoint getInstance() throws UnknownHostException {
@@ -36,24 +39,24 @@ public class MasterEndpoint extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-        System.out.println("Opening: " + webSocket.getRemoteSocketAddress() + " with handshake: " + clientHandshake.getResourceDescriptor() );
+        logger.log("Opening: " + webSocket.getRemoteSocketAddress() + " with handshake: " + clientHandshake.getResourceDescriptor() );
         connectionPool.add(webSocket);
     }
 
     @Override
     public void onClose(WebSocket webSocket, int code, String reason, boolean remote) {
-        System.out.println("Closing: " + webSocket.getRemoteSocketAddress() + " with code: " + code + ". Reason: " + reason );
+        logger.log("Closing: " + webSocket.getRemoteSocketAddress() + " with code: " + code + ". Reason: " + reason );
         connectionPool.remove(webSocket);
     }
 
     @Override
     public void onMessage(WebSocket webSocket, String message) {
-        System.out.println("Message on: " + webSocket.getRemoteSocketAddress() + " Content: " + (message.length()>100?message.substring(0, 100)+" [...] (message print has been shortened)":message) );
+        logger.log("Message on: " + webSocket.getRemoteSocketAddress() + " Content: " + (message.length()>100?message.substring(0, 100)+" [...] (message print has been shortened)":message) );
         Chamberlain.handle(message, webSocket);
     }
 
     @Override
     public void onError(WebSocket webSocket, Exception e) {
-        System.out.println("ERROR on: " + webSocket.getRemoteSocketAddress() + " Error message: " + e.getMessage() );
+        logger.log("ERROR on: " + webSocket.getRemoteSocketAddress() + " Error message: " + e.getMessage() );
     }
 }

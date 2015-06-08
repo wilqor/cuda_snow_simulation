@@ -21,7 +21,7 @@
         <system.version>linux-x86_64</system.version>
          -->
         <system.version>windows-x86_64</system.version>
-        <main_dir>${project.parent.relativePath}</main_dir>
+        <main_dir>..</main_dir>
     </properties>
 
     <dependencies>

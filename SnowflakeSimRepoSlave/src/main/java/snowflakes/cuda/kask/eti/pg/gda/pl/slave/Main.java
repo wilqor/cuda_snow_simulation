@@ -11,23 +11,19 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
+    private static SlaveEndpoint slave;
+
     public static void main(String[] args) throws InterruptedException {
-
-        Map<Integer, Float> sizes = new HashMap();
-
-        Map<Integer, Queue<Float>> snowflakesQueues = new LinkedHashMap<Integer, Queue<Float>>();
         System.out.println("Please write master address");
         Scanner scanner = new Scanner(System.in);
 
         String address = scanner.nextLine();
         address = "ws://" + address + ":8080/";
         System.out.println(URI.create(address).toString());
-        SlaveEndpoint slave = new SlaveEndpoint(URI.create(address));
+        slave = new SlaveEndpoint(URI.create(address));
         slave.connectBlocking();
-        String line = "";
 
-        while(slave.getConnection() != null) {
-
+        while(slave.isOpen()) {
             TimeUnit.SECONDS.sleep(5);
         }
 
