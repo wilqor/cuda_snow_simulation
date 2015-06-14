@@ -28,7 +28,7 @@
 {
      int id = blockIdx.x * blockDim.x + threadIdx.x, jump = gridDim.x * blockDim.x, i, j, usageIndex,
             row = iterations * 2 + 1;
-     float x, y, windX, windY, scale, sin, cos;
+     float x, y, windX, windY, scale, sin, cos, prevX, prevY;
      // trigonometrics used for wind force
      sincosf(angle, &sin, &cos);
      windX = wind * sin;
@@ -38,10 +38,12 @@
      {
         scale = positions[i * row + 0];
         usageIndex = usageIndexes[i];
+        prevX = positions[i * row + 1];
+        prevY = positions[i * row + 2];
         // starting from index 2, as <0, 2> is to be prepared earlier
         for (j = 3; j < iterations * 2 + 1; j += 2)
         {
-            x = positions[i * row + j - 2] + windX;
+            x = prevX + windX;
             if (x < minX)
             {
                 x = maxX + x - minX;
@@ -50,7 +52,7 @@
             {
                 x = minX + x - maxX;
             }
-            y = positions[i * row + j - 1] + gravity * scale + windY;
+            y = prevY + gravity * scale + windY;
             if (y > maxY && usageIndex == 0)
             {
                 usageIndex = j;
@@ -58,6 +60,8 @@
             }
             positions[i * row + j] = x;
             positions[i * row + j + 1] = y;
+            prevX = x;
+            prevY = y;
         }
      }
 }

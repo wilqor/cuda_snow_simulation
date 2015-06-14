@@ -65,6 +65,7 @@ public class Chamberlain {
                             .setCurrentSnowflakesCount(partSize)
                             .setWindForce(SnowflakeSimMain.getTransferWindForce())
                             .setWindAngle(SnowflakeSimMain.windAngle).build());
+            snowFlakesDistributed += partSize;
         } else {
             msgBuilder.setEndOfWork(true);
         }
