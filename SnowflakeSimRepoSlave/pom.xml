@@ -22,6 +22,9 @@
          -->
         <system.version>windows-x86_64</system.version>
         <main_dir>..</main_dir>
+
+        <master>192.168.2.102</master>
+        <device>0</device>
     </properties>
 
     <dependencies>
@@ -352,6 +355,8 @@
                         <!-- the main class -->
                         <argument>snowflakes.cuda.kask.eti.pg.gda.pl.slave.Main</argument>
                         <!-- other possible arguments -->
+                        <argument>${master}</argument>
+                        <argument>${device}</argument>
                     </arguments>
                 </configuration>
             </plugin>

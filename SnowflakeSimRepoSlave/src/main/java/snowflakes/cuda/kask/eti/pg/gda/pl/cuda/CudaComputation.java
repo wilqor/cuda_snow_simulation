@@ -7,6 +7,8 @@ import jcuda.jcurand.curandGenerator;
 import jcuda.jcurand.curandRngType;
 import jcuda.runtime.cudaDeviceProp;
 import snowflakes.cuda.kask.eti.pg.gda.pl.commons.TimeLogger;
+import snowflakes.cuda.kask.eti.pg.gda.pl.slave.Main;
+
 import java.io.*;
 
 import static jcuda.driver.JCudaDriver.*;
@@ -93,7 +95,7 @@ public class CudaComputation {
         }
 
         // initializing the 1st available device as default
-        cuInit(0);
+        cuInit(Main.DEVICE_NO);
         device = new CUdevice();
         cuDeviceGet(device, DEVICE_NUMBER);
         CUcontext context = new CUcontext();
